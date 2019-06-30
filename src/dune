@@ -1,0 +1,4 @@
+(library
+ (name            zil)
+ (public_name     zil)
+ (libraries       faraday yojson secp256k1 bech32 pb))
