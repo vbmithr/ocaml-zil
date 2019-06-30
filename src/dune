@@ -1,4 +1,23 @@
 (library
  (name            zil)
  (public_name     zil)
- (libraries       faraday yojson secp256k1 bech32 pb))
+ (modules         zil)
+ (libraries
+   hex
+   faraday
+   yojson
+   secp256k1
+   bech32
+   pb
+   digestif.c
+   ocplib-json-typed))
+
+(library
+ (name            zil_async)
+ (public_name     zil-async)
+ (modules         zil_async)
+ (libraries
+   fastrest
+   zil
+   core
+   async))

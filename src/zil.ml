@@ -27,7 +27,7 @@ type tx = {
   gasprice: int64;
   gaslimit: int64;
   code: string option;
-  data: Yojson.Safe.t option;
+  data: Json_repr.ezjsonm option;
 }
 
 module ByteArray = struct
@@ -81,6 +81,80 @@ let write ctx { version; nonce; toaddr = { prog; _ };
   setf tx Tx.gasprice (ByteArray.of_int64 gasprice) ;
   setf tx Tx.gaslimit (Unsigned.UInt64.of_int64 gaslimit) ;
   setf tx Tx.code code ;
-  setf tx Tx.data (match data with None -> None | Some d -> Some (Yojson.Safe.to_string d)) ;
+  setf tx Tx.data (match data with
+      | None -> None
+      | Some _ -> invalid_arg "not implemented") ;
   write tx
 
+type 'a msg = {
+  name: string ;
+  params: 'a list ;
+}
+
+let msg_encoding param_encoding =
+  let open Json_encoding in
+  conv
+    (fun { name ; params } -> (), (), name, params)
+    (fun ((), (), name, params) -> { name ; params })
+    (obj4
+       (req "id" (constant "1"))
+       (req "jsonrpc" (constant "2.0"))
+       (req "method" string)
+       (req "params" (list param_encoding)))
+
+let int64str_encoding =
+  let open Json_encoding in
+  conv Int64.to_string Int64.of_string string
+
+let addr_encoding =
+  let open Json_encoding in
+  conv
+    (fun Bech32.Segwit.{ prog ; _ } ->
+       let `Hex prog_hex = Hex.of_string prog in
+       prog_hex)
+    (fun _ -> assert false)
+    string
+
+let pubkey_encoding ctx =
+  let open Json_encoding in
+  conv
+    (fun k ->
+       let `Hex k_hex = Hex.of_bigstring (Key.to_bytes ~compress:true ctx k) in
+       k_hex)
+    (fun _ -> assert false)
+    string
+
+let bs_hex_encoding =
+  let open Json_encoding in
+  conv
+    (fun bs -> let `Hex bs_hex = Hex.of_bigstring bs in bs_hex)
+    (fun _ -> assert false)
+    string
+
+let network_encoding =
+  let open Json_encoding in
+  conv
+    (fun n -> Unsigned.UInt32.to_int32 (Tx.version_of_p n))
+    (fun _ -> assert false)
+    int32
+
+let tx_encoding ctx =
+  let open Json_encoding in
+  conv
+    (fun ({ version; nonce; toaddr; senderpubkey;
+            amount; gasprice; gaslimit; code;
+            data }, signature) ->
+      (version, nonce, toaddr, senderpubkey, amount,
+       gasprice, gaslimit, code, data, signature))
+    (fun _ -> assert false)
+    (obj10
+       (req "version" network_encoding)
+       (req "nonce" int53)
+       (req "toAddr" addr_encoding)
+       (req "pubKey" (pubkey_encoding ctx))
+       (req "amount" int64str_encoding)
+       (req "gasPrice" int64str_encoding)
+       (req "gasLimit" int64str_encoding)
+       (opt "code" string)
+       (opt "data" any_ezjson_value)
+       (req "signature" bs_hex_encoding))

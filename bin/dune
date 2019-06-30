@@ -1,0 +1,7 @@
+(executable
+ (name wallet)
+ (public_name zil-wallet)
+ (modules wallet)
+ (package zil-async)
+ (preprocess (pps ppx_let ppx_sexp_conv))
+ (libraries logs-async-reporter core async zil zil-async ledgerwallet-zil))
