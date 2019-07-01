@@ -19,7 +19,7 @@ open Libsecp256k1.External
 open Pb
 
 type tx = {
-  version: [`Mainnet | `Testnet];
+  network: [`Mainnet | `Testnet];
   nonce: int64;
   toaddr: [`Zil] Bech32.Segwit.t;
   senderpubkey: Key.public Key.t;
@@ -29,6 +29,13 @@ type tx = {
   code: string option;
   data: Json_repr.ezjsonm option;
 }
+
+let simple_tx
+    ?(gasprice=1000000000L)
+    ?(gaslimit=1L)
+    ~network ~nonce ~toaddr ~senderpubkey ~amount () =
+  { network ; nonce ; toaddr ; senderpubkey ; amount ;
+    gasprice ; gaslimit ; code = None ; data = None }
 
 module ByteArray = struct
   module ByteArray = (val message "ByteArray")
@@ -49,7 +56,7 @@ module Tx = struct
   let mainnet = Unsigned.UInt32.of_int 0xffff
   let testnet = Unsigned.UInt32.of_int 21823489
 
-  let version_of_p = function
+  let network_of_p = function
     | `Mainnet -> mainnet
     | `Testnet -> testnet
 
@@ -68,12 +75,12 @@ module Tx = struct
   let data         = Tx.optional string "data" 9
 end
 
-let write ctx { version; nonce; toaddr = { prog; _ };
+let write ctx { network; nonce; toaddr = { prog; _ };
                 senderpubkey; amount; gasprice;
                 gaslimit; code; data } =
 
   let tx = create Tx.t in
-  setf tx Tx.version (Tx.version_of_p version) ;
+  setf tx Tx.version (Tx.network_of_p network) ;
   setf tx Tx.nonce (Unsigned.UInt64.of_int64 nonce) ;
   setf tx Tx.toaddr prog ;
   setf tx Tx.senderpubkey (ByteArray.of_bigarray (Key.to_bytes ~compress:true ctx senderpubkey)) ;
@@ -90,6 +97,8 @@ type 'a msg = {
   name: string ;
   params: 'a list ;
 }
+
+let create_msg ?(params = []) name = { name ; params }
 
 let msg_encoding param_encoding =
   let open Json_encoding in
@@ -134,17 +143,17 @@ let bs_hex_encoding =
 let network_encoding =
   let open Json_encoding in
   conv
-    (fun n -> Unsigned.UInt32.to_int32 (Tx.version_of_p n))
+    (fun n -> Unsigned.UInt32.to_int32 (Tx.network_of_p n))
     (fun _ -> assert false)
     int32
 
 let tx_encoding ctx =
   let open Json_encoding in
   conv
-    (fun ({ version; nonce; toaddr; senderpubkey;
+    (fun ({ network; nonce; toaddr; senderpubkey;
             amount; gasprice; gaslimit; code;
             data }, signature) ->
-      (version, nonce, toaddr, senderpubkey, amount,
+      (network, nonce, toaddr, senderpubkey, amount,
        gasprice, gaslimit, code, data, signature))
     (fun _ -> assert false)
     (obj10
