@@ -48,7 +48,11 @@ module ByteArray = struct
     ba
 
   let of_bigarray s = of_string (Bigstring.to_string s)
-  let of_int64 i = of_string (Int64.to_string i)
+  let of_int64 i =
+    let buf = Cstruct.create 16 in
+    Cstruct.memset buf 0 ;
+    Cstruct.BE.set_uint64 buf 8 i ;
+    of_string (Cstruct.to_string buf)
 end
 
 module Tx = struct
@@ -115,11 +119,34 @@ let int64str_encoding =
   let open Json_encoding in
   conv Int64.to_string Int64.of_string string
 
+let string_rev s =
+  let len = String.length s in
+  let buf = Bytes.create len in
+  for i = 0 to len - 1 do
+    Bytes.set buf i s.[len - i - 1]
+  done ;
+  Bytes.unsafe_to_string buf
+
+let hex_of_string pkh =
+  let open Z in
+  let res = ref [] in
+  let z = of_bits (string_rev Digestif.SHA256.(digest_string pkh |> to_raw_string)) in
+  for i = 0 to 39 do
+    res := (logand z (shift_left one Stdlib.(255 - 6*i)) <> Z.zero) :: !res
+  done ;
+  let buf = Bytes.create 40 in
+  let `Hex pkh_hex = Hex.of_string pkh in
+  List.iteri begin fun i -> function
+    | true -> Bytes.set buf i (Char.uppercase_ascii pkh_hex.[i])
+    | false -> Bytes.set buf i pkh_hex.[i]
+  end (List.rev !res) ;
+  `Hex (Bytes.unsafe_to_string buf)
+
 let addr_encoding =
   let open Json_encoding in
   conv
     (fun Bech32.Segwit.{ prog ; _ } ->
-       let `Hex prog_hex = Hex.of_string prog in
+       let `Hex prog_hex = hex_of_string prog in
        prog_hex)
     (fun _ -> assert false)
     string

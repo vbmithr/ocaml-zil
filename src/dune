@@ -10,7 +10,8 @@
    bech32
    pb
    digestif.c
-   ocplib-json-typed))
+   ocplib-json-typed
+   zarith))
 
 (library
  (name            zil_async)
