@@ -147,14 +147,15 @@ let network_encoding =
     (fun _ -> assert false)
     int32
 
+(* FIXME: code data *)
 let tx_encoding ctx =
   let open Json_encoding in
   conv
     (fun ({ network; nonce; toaddr; senderpubkey;
-            amount; gasprice; gaslimit; code;
-            data }, signature) ->
+            amount; gasprice; gaslimit; code = _ ;
+            data = _ }, signature) ->
       (network, nonce, toaddr, senderpubkey, amount,
-       gasprice, gaslimit, code, data, signature))
+       gasprice, gaslimit, (), (), signature))
     (fun _ -> assert false)
     (obj10
        (req "version" network_encoding)
@@ -164,6 +165,6 @@ let tx_encoding ctx =
        (req "amount" int64str_encoding)
        (req "gasPrice" int64str_encoding)
        (req "gasLimit" int64str_encoding)
-       (opt "code" string)
-       (opt "data" any_ezjson_value)
+       (req "code" (constant ""))
+       (req "data" (constant ""))
        (req "signature" bs_hex_encoding))
