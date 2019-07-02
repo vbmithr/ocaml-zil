@@ -3,6 +3,7 @@
  (public_name     zil)
  (modules         zil)
  (libraries
+   rresult
    hex
    faraday
    yojson

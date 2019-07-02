@@ -1,8 +1,9 @@
 open Core
 open Async
-(* open Libsecp256k1.External *)
+open Libsecp256k1.External
 open Alcotest
 
+open Zil
 open Zil_async
 
 let () =
@@ -16,14 +17,17 @@ let wrap_request ?(speed=`Quick) n service =
     | Error _ -> failwith ""
   end
 
-(* let sk, addr =
- *   let ctx = Context.create () in
- *   let sk = Key.read_sk_exn ctx (Monocypher.Rand.gen 32) in
- *   let pk = Key.neuterize_exn ctx sk in
- *   let pk_bytes = Key.to_bytes ~compress:true ctx pk in
- *   let pkh = Digestif.SHA256.(to_raw_string (digest_bigstring pk_bytes)) in
- *   sk,
- *   Bech32.Segwit.(create (module Zil) (String.subo ~pos:12 ~len:20 pkh)) *)
+let ctx = Context.create ()
+let sk, pk, _addr =
+  let entropy = Monocypher.Rand.gen 32 in
+  (* Format.printf "%a@."
+   *   Hex.pp (Hex.of_cstruct (Cstruct.of_bigarray entropy)) ; *)
+  let sk = Key.read_sk_exn ctx entropy in
+  let pk = Key.neuterize_exn ctx sk in
+  let pk_bytes = Key.to_bytes ~compress:true ctx pk in
+  let pkh = Digestif.SHA256.(to_raw_string (digest_bigstring pk_bytes)) in
+  sk, pk,
+  Bech32.Segwit.(create (module Zil) (String.subo ~pos:12 ~len:20 pkh))
 
 let addr =
   let open Bech32.Segwit in
@@ -43,8 +47,17 @@ let bech32 () =
   check string "bech32 to byte20" addr prog ;
   ()
 
+let pb () =
+  let tx = simple_tx ~network:`Testnet ~nonce:1L ~toaddr:addr
+      ~senderpubkey:pk ~amount:1_000_000_000L () in
+  let buf = write ctx tx in
+  match read ctx (Faraday.serialize_to_string buf) with
+  | Error msg -> fail msg
+  | Ok tx' -> assert (tx = tx')
+
 let checks = [
-  test_case "Bech32" `Quick bech32
+  test_case "Bech32" `Quick bech32 ;
+  test_case "pb" `Quick pb
 ]
 
 let rest = [

@@ -15,6 +15,7 @@
  *     optional bytes data             = 9;
  * } *)
 
+open Rresult
 open Libsecp256k1.External
 open Pb
 
@@ -96,6 +97,28 @@ let write ctx { network; nonce; toaddr = { prog; _ };
       | None -> None
       | Some _ -> invalid_arg "not implemented") ;
   write tx
+
+let tx_of_pb ctx v =
+  begin match getf v Tx.version with
+    | i when i = Tx.testnet -> Ok `Testnet
+    | i when i = Tx.mainnet -> Ok `Mainnet
+    | _ -> Error "version"
+  end >>= fun network ->
+  let nonce = Unsigned.UInt64.to_int64 (getf v Tx.nonce) in
+  let toaddr = Bech32.Segwit.(create (module Zil) (getf v Tx.toaddr)) in
+  Key.read_pk ctx (Bigstring.of_string (getf (getf v Tx.senderpubkey) ByteArray.data)) >>= fun senderpubkey ->
+  let amount = getf (getf v Tx.amount) ByteArray.data in
+  let amount = Cstruct.(BE.get_uint64 (of_string ~off:8 ~len:8 amount) 0) in
+  let gasprice = getf (getf v Tx.gasprice) ByteArray.data in
+  let gasprice = Cstruct.(BE.get_uint64 (of_string ~off:8 ~len:8 gasprice) 0) in
+  let gaslimit = Unsigned.UInt64.to_int64 (getf v Tx.gaslimit) in
+  Ok { network ; nonce ; toaddr ; senderpubkey ;
+       amount ; gasprice ; gaslimit ; code = None ; data = None }
+
+let read ctx str =
+  match Angstrom.parse_string (read Tx.t) str with
+  | Error e -> Error e
+  | Ok v -> tx_of_pb ctx v
 
 type 'a msg = {
   name: string ;

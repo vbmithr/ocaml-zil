@@ -25,6 +25,7 @@ val simple_tx :
   senderpubkey:Key.public Key.t -> amount:int64 -> unit -> tx
 
 val write : Context.t -> tx -> Faraday.t
+val read : Context.t -> string -> (tx, string) result
 val tx_encoding : Context.t -> (tx * Bigstring.t) Json_encoding.encoding
 
 type 'a msg = {
