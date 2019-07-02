@@ -26,8 +26,9 @@ let wrap_request ?(speed=`Quick) n service =
  *   Bech32.Segwit.(create (module Zil) (String.subo ~pos:12 ~len:20 pkh)) *)
 
 let addr =
-  Bech32.Segwit.(decode_exn (module Zil)
-                   "zil1zd6y8tf9g2huqckfhepcfa7y3yftf67zlmgec6")
+  let open Bech32.Segwit in
+  decode_exn (module Zil)
+    "zil1u7dazlsvzxuxfe2m9w3eteg838mr34kccgcc9v"
 
 let bech32 () =
   let bech32 = "zil1zd6y8tf9g2huqckfhepcfa7y3yftf67zlmgec6" in
