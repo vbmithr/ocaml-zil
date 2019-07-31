@@ -38,10 +38,14 @@ let transfer testnet keyId dstAddr qty =
     let tx = Zil.simple_tx
       ~network ~nonce:(Int64.succ nonce)
       ~toaddr:dstAddr ~senderpubkey ~amount () in
+    let ctx_js = Json_encoding.construct (Zil.unsigned_encoding ctx) tx in
+    Logs.info (fun m -> m "%s" (Ezjsonm.value_to_string ctx_js)) ;
     let buf = Zil.write ctx tx in
     let serialized =
       Cstruct.of_bigarray (Faraday.serialize_to_bigstring buf) in
-    Logs.debug (fun m -> m "Sign a tx of length %d" (Cstruct.len serialized)) ;
+    Logs.debug begin fun m -> m "Sign a tx of length %d: %a"
+        (Cstruct.len serialized) Hex.pp (Hex.of_cstruct serialized)
+    end ;
     let signature =
       Ledgerwallet_zil.sign_txn ~pp:Format.err_formatter h (Int32.of_int_exn keyId) serialized in
     Logs.debug (fun m -> m "Got a signature of length %d" (Cstruct.len signature)) ;

@@ -165,8 +165,9 @@ let hex_of_string pkh =
   end (List.rev !res) ;
   `Hex (Bytes.unsafe_to_string buf)
 
+open Json_encoding
+
 let addr_encoding =
-  let open Json_encoding in
   conv
     (fun Bech32.Segwit.{ prog ; _ } ->
        let `Hex prog_hex = hex_of_string prog in
@@ -175,7 +176,6 @@ let addr_encoding =
     string
 
 let pubkey_encoding ctx =
-  let open Json_encoding in
   conv
     (fun k ->
        let `Hex k_hex = Hex.of_bigstring (Key.to_bytes ~compress:true ctx k) in
@@ -184,30 +184,27 @@ let pubkey_encoding ctx =
     string
 
 let bs_hex_encoding =
-  let open Json_encoding in
   conv
     (fun bs -> let `Hex bs_hex = Hex.of_bigstring bs in bs_hex)
-    (fun _ -> assert false)
+    (fun hex -> Hex.to_bigstring (`Hex hex))
     string
 
 let network_encoding =
-  let open Json_encoding in
   conv
     (fun n -> Unsigned.UInt32.to_int32 (Tx.network_of_p n))
     (fun _ -> assert false)
     int32
 
 (* FIXME: code data *)
-let tx_encoding ctx =
-  let open Json_encoding in
+let unsigned_encoding ctx =
   conv
     (fun ({ network; nonce; toaddr; senderpubkey;
             amount; gasprice; gaslimit; code = _ ;
-            data = _ }, signature) ->
+            data = _ }) ->
       (network, nonce, toaddr, senderpubkey, amount,
-       gasprice, gaslimit, (), (), signature))
+       gasprice, gaslimit, (), ()))
     (fun _ -> assert false)
-    (obj10
+    (obj9
        (req "version" network_encoding)
        (req "nonce" int53)
        (req "toAddr" addr_encoding)
@@ -216,5 +213,8 @@ let tx_encoding ctx =
        (req "gasPrice" int64str_encoding)
        (req "gasLimit" int64str_encoding)
        (req "code" (constant ""))
-       (req "data" (constant ""))
-       (req "signature" bs_hex_encoding))
+       (req "data" (constant "")))
+
+let signed_encoding ctx =
+  merge_objs (unsigned_encoding ctx)
+    (obj1 (req "signature" bs_hex_encoding))

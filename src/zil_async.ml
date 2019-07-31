@@ -99,6 +99,6 @@ let tx_result_encoding =
 let createTransaction tx =
   let ctx = Context.create () in
   let msg = create_msg ~params:[tx] "CreateTransaction" in
-  let enc = msg_encoding (tx_encoding ctx) in
+  let enc = msg_encoding (signed_encoding ctx) in
   post_json ~params:(enc, msg)
     (result_encoding tx_result_encoding) (uri_of_network (fst tx).network)

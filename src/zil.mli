@@ -16,6 +16,11 @@ type tx = {
   data: Json_repr.ezjsonm option;
 }
 
+val unsigned_encoding :
+  Context.t -> tx Json_encoding.encoding
+val signed_encoding :
+  Context.t -> (tx * Bigstring.t) Json_encoding.encoding
+
 val simple_tx :
   ?gasprice:int64 ->
   ?gaslimit:int64 ->
@@ -26,7 +31,6 @@ val simple_tx :
 
 val write : Context.t -> tx -> Faraday.t
 val read : Context.t -> string -> (tx, string) result
-val tx_encoding : Context.t -> (tx * Bigstring.t) Json_encoding.encoding
 
 type 'a msg = {
   name: string ;
