@@ -39,9 +39,12 @@ let transfer testnet keyId dstAddr qty =
       ~network ~nonce:(Int64.succ nonce)
       ~toaddr:dstAddr ~senderpubkey ~amount () in
     let buf = Zil.write ctx tx in
+    let serialized =
+      Cstruct.of_bigarray (Faraday.serialize_to_bigstring buf) in
+    Logs.debug (fun m -> m "Sign a tx of length %d" (Cstruct.len serialized)) ;
     let signature =
-      Ledgerwallet_zil.sign_txn h (Int32.of_int_exn keyId)
-        (Cstruct.of_bigarray (Faraday.serialize_to_bigstring buf)) in
+      Ledgerwallet_zil.sign_txn ~pp:Format.err_formatter h (Int32.of_int_exn keyId) serialized in
+    Logs.debug (fun m -> m "Got a signature of length %d" (Cstruct.len signature)) ;
     let srv =  Zil_async.createTransaction (tx, Cstruct.to_bigarray signature) in
     Fastrest.request srv >>= function
     | Error _ -> failwith "CreateTransaction"

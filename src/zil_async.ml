@@ -27,15 +27,39 @@ let uri_of_network = function
  *     "params", `A (List.map (fun s -> `String s) (List.assoc "params" params)) ;
  *   ] *)
 
-let result_encoding result_encoding =
+type error = {
+  code: int ;
+  message: string ;
+}
+
+let error_encoding =
   let open Json_encoding in
   conv
-    (fun _ -> assert false)
-    (fun ((), (), v) -> Ok v)
-    (obj3
+    (fun { code ; message } -> (), (code, message))
+    (fun ((), (code, message)) -> { code ; message })
+    (merge_objs unit (obj2
+                        (req "code" int)
+                        (req "message" string)))
+
+let jsonrpc_encoding =
+  let open Json_encoding in
+  conv (fun () -> (), ()) (fun ((), ()) -> ())
+    (obj2
        (req "id" (constant "1"))
-       (req "jsonrpc" (constant "2.0"))
-       (req "result" result_encoding))
+       (req "jsonrpc" (constant "2.0")))
+
+let result_encoding result_encoding =
+  let open Json_encoding in
+  union [
+    case (merge_objs jsonrpc_encoding
+            (obj1 (req "result" result_encoding)))
+      (function Ok v -> Some ((), v) | _ -> None)
+      (fun ((), v) -> Ok v) ;
+    case (merge_objs jsonrpc_encoding
+            (obj1 (req "error" error_encoding)))
+      (function Error e -> Some ((), e) | _ -> None)
+      (fun ((), v) -> Error v)
+  ]
 
 type balance = {
   balance: int64;
