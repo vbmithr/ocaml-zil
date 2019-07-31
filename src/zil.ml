@@ -58,7 +58,7 @@ end
 
 module Tx = struct
 
-  let mainnet = Unsigned.UInt32.of_int 0xffff
+  let mainnet = Unsigned.UInt32.of_int 65537
   let testnet = Unsigned.UInt32.of_int 21823489
 
   let network_of_p = function
