@@ -63,7 +63,7 @@ let addrCmd =
     let open Command.Let_syntax in
     [%map_open
       let i = anon ("N" %: int)
-      and () = Logs_async_reporter.set_level_via_param None in
+      and () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
         getAddr i
@@ -76,7 +76,7 @@ let balanceCmd =
     [%map_open
       let testnet = flag "testnet" ~doc:" Use testnet" no_arg
       and addr = anon ("address" %: string)
-      and () = Logs_async_reporter.set_level_via_param None in
+      and () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
         getBalance testnet addr
@@ -92,7 +92,7 @@ let transferCmd =
       and keyId = anon ("id" %: int)
       and dstAddr = anon ("addr" %: addr)
       and qty = anon ("qty" %: float)
-      and () = Logs_async_reporter.set_level_via_param None in
+      and () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
         transfer testnet keyId dstAddr qty

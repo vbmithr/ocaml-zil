@@ -51,7 +51,9 @@ let pb () =
   let tx = simple_tx ~network:`Testnet ~nonce:1L ~toaddr:addr
       ~senderpubkey:pk ~amount:1_000_000_000L () in
   let buf = write ctx tx in
-  match read ctx (Faraday.serialize_to_string buf) with
+  let buf_str = Faraday.serialize_to_string buf in
+  Format.printf "%a@." Hex.pp (Hex.of_string buf_str) ;
+  match read ctx buf_str with
   | Error msg -> fail msg
   | Ok tx' -> assert (tx = tx')
 

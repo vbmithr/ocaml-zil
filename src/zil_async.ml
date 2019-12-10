@@ -1,3 +1,4 @@
+open Core
 open Fastrest
 open Libsecp256k1.External
 open Zil
@@ -27,16 +28,11 @@ let uri_of_network = function
  *     "params", `A (List.map (fun s -> `String s) (List.assoc "params" params)) ;
  *   ] *)
 
-type error = {
-  code: int ;
-  message: string ;
-}
-
 let error_encoding =
   let open Json_encoding in
   conv
-    (fun { code ; message } -> (), (code, message))
-    (fun ((), (code, message)) -> { code ; message })
+    (fun _ -> assert false)
+    (fun ((), (code, message)) -> Error.createf "%d: %s" code message)
     (merge_objs unit (obj2
                         (req "code" int)
                         (req "message" string)))
